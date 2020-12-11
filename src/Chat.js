@@ -9,15 +9,32 @@ import {
   SearchOutlined,
 } from "@material-ui/icons";
 import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import "./Chat.css";
+import db from "./firebase";
 
 const Chat = () => {
   const [seed, setSeed] = useState("");
   const [input, setInput] = useState("");
+  const { roomId } = useParams();
+  const [roomName, setRoomName] = useState("");
+
+  useEffect(() => {
+    let unsubscribe = null;
+    if (roomId) {
+      unsubscribe = db
+        .collection("rooms")
+        .doc(roomId)
+        .onSnapshot((snapshot) => setRoomName(snapshot.data.name));
+    }
+    return () => {
+      unsubscribe();
+    };
+  }, [roomId]);
 
   useEffect(() => {
     setSeed(Math.floor(Math.random() * 5000));
-  }, []);
+  }, [roomId]);
 
   const sendMessage = (e) => {
     e.preventDefault();
