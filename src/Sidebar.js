@@ -4,9 +4,12 @@ import React, { useEffect, useState } from "react";
 import db from "./firebase";
 import "./Sidebar.css";
 import SidebarChat from "./SidebarChat";
+import { useStateValue } from "./StateProvider";
 
 const Sidebar = () => {
   const [rooms, setRooms] = useState([]);
+
+  const [{ user }, dispatch] = useStateValue();
 
   useEffect(() => {
     const unsubscribe = db.collection("rooms").onSnapshot((snapshot) => {
@@ -27,7 +30,7 @@ const Sidebar = () => {
   return (
     <div className="sidebar">
       <header className="sidebar__header">
-        <Avatar />
+        <Avatar src={user?.photoURL} />
         <div className="sidebar__headerRight">
           <IconButton>
             <DonutLarge fontSize="small" />

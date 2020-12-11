@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-one-expression-per-line */
 /* eslint-disable no-console */
 /* eslint-disable react/button-has-type */
 import { Avatar, IconButton } from "@material-ui/core";
@@ -11,25 +12,36 @@ import {
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "./Chat.css";
+import firebase from "firebase";
 import db from "./firebase";
+import { useStateValue } from "./StateProvider";
 
 const Chat = () => {
   const [seed, setSeed] = useState("");
   const [input, setInput] = useState("");
   const { roomId } = useParams();
   const [roomName, setRoomName] = useState("");
-
+  const [messages, setMessages] = useState([]);
+  const [{ user }, dispatch] = useStateValue();
   useEffect(() => {
-    let unsubscribe = null;
     if (roomId) {
-      unsubscribe = db
-        .collection("rooms")
+      db.collection("rooms")
         .doc(roomId)
-        .onSnapshot((snapshot) => setRoomName(snapshot.data.name));
+        .onSnapshot((snapshot) => setRoomName(snapshot.data().name));
+
+      db.collection("rooms")
+        .doc(roomId)
+        .collection("messages")
+        .orderBy("timestamp", "asc")
+        .onSnapshot((snapshot) =>
+          setMessages(
+            snapshot.docs.map((doc) => {
+              console.log(doc.data());
+              return doc.data();
+            })
+          )
+        );
     }
-    return () => {
-      unsubscribe();
-    };
   }, [roomId]);
 
   useEffect(() => {
@@ -39,6 +51,11 @@ const Chat = () => {
   const sendMessage = (e) => {
     e.preventDefault();
     console.log("You typeed >> : ", input);
+    db.collection("rooms").doc(roomId).collection("messages").add({
+      message: input,
+      name: user.displayName,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    });
     setInput("");
   };
 
@@ -50,7 +67,12 @@ const Chat = () => {
         />
         <div className="chat__headerInfo">
           <h3>Room Name</h3>
-          <p>Last seen at ...</p>
+          <p>
+            Last seen{" "}
+            {new Date(
+              messages[messages.length - 1]?.timestamp?.toDate()
+            ).toUTCString()}
+          </p>
         </div>
         <div className="chat__headerRight">
           <IconButton>
@@ -66,11 +88,21 @@ const Chat = () => {
       </div>
 
       <div className="chat__body">
-        <div className={`chat__message {${false} && chat__reciver}`}>
-          <span className="chat__name">Ahmed Zaki </span>
-          Hey Guys
-          <span className="chat__timestamp">3:52pm</span>
-        </div>
+        {messages.map((message, index) => (
+          <div
+            // eslint-disable-next-line react/no-array-index-key
+            key={index}
+            className={`chat__message ${
+              message.name === user.displayName && "chat__reciever"
+            }`}
+          >
+            <span className="chat__name">{message.name}</span>
+            {message.message}
+            <span className="chat__timestamp">
+              {new Date(message.timestamp?.toDate()).toUTCString()}
+            </span>
+          </div>
+        ))}
       </div>
 
       <div className="chat__footer">
